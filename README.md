@@ -1,79 +1,93 @@
-This project was bootstrapped with [Create Contentful App](https://github.com/contentful/create-contentful-app).
+# Live Visibility Handler App
 
-## How to use
+## Overview
+Live Visibility Handler is a custom Contentful app whose primary job is to give editors a safe switch for hiding or showing `siteGameV2` entries on production (“live”) environments. The project bundles a minimal React configuration screen and a pair of Contentful App Action functions that update the `liveHidden` field on targeted entries, so editors can control visibility without touching raw data structures.
 
-Execute create-contentful-app with npm, npx or yarn to bootstrap the example:
+## Tech Stack
+- **Framework & Tooling:** React 18 with Vite, TypeScript, Vitest for unit testing
+- **Contentful SDKs:** `@contentful/app-sdk`, `@contentful/react-apps-toolkit`, Forma 36 UI components
+- **Serverless Functions:** Contentful App Action functions written with `@contentful/node-apps-toolkit` and the `contentful-management` client
 
+## How the project works
+1. **Frontend app:** The UI renders inside Contentful’s App configuration location. It is powered by React and Forma 36 components, and is bootstrapped via `SDKProvider` so it can read/write installation parameters and respond to the host environment.
+2. **App Action functions:** Two serverless handlers live under `functions/`:
+   - `enableLiveHiddenActionHandler` sets `liveHidden` to `true` for the requested entries.
+   - `disableLiveHiddenActionHandler` sets `liveHidden` to `false` for the requested entries.
+
+   Both functions receive an App Action payload with `entryIds`, fetch the matching `siteGameV2` entries via the Contentful Management API, mutate the `liveHidden` field in the default locale, and persist the updates.
+3. **Manifest & actions:** `contentful-app-manifest.json` wires the app actions (`hideOnLive` and `showOnLive`) to those functions, so they can be invoked from entry actions or other workflows inside Contentful.
+
+## Project architecture
+```
+workspace/
+├── src/                      # React app served inside Contentful
+│   ├── App.tsx               # Location resolver, currently only config screen
+│   ├── components/           # Shared UI pieces (e.g., localhost warning)
+│   ├── locations/            # Location-specific screens (ConfigScreen)
+│   └── index.tsx             # Entry point, SDKProvider bootstrap
+├── functions/                # App Action serverless handlers
+│   ├── enableLiveHiddenActionHandler.ts
+│   └── disableLiveHiddenActionHandler.ts
+├── contentful-app-manifest.json  # Declares app actions and function bundles
+├── package.json              # Scripts for dev server, build, upload, actions
+└── yarn.lock / node_modules  # Dependencies
+```
+
+## Installation
+1. **Prerequisites**
+   - Node.js 18+
+   - Yarn or npm
+   - Access to a Contentful organization where you can create custom apps and App Actions
+2. **Install dependencies**
+   ```bash
+   yarn install
+   # or
+   npm install
+   ```
+
+## Local development
 ```bash
-# npx
-npx create-contentful-app --typescript
+yarn dev
+# or
+npm run dev
+```
+- Starts the Vite dev server (default port 5173).
+- When opened outside the Contentful web app, the UI shows a warning screen because Contentful features require the host environment.
+- To test inside Contentful, use `contentful-app-scripts create-app-definition` and `add-locations` (already wired via package.json) to register the app and point the location URL to your dev server.
 
-# npm
-npm init contentful-app -- --typescript
+## Building & deploying
+```bash
+yarn build
+```
+- Runs `vite build` for the frontend and compiles the functions via `build:functions`.
+- Outputs a production-ready bundle under `dist/` (frontend) and `functions/*.js`.
 
-# Yarn
-yarn create contentful-app --typescript
+Upload the bundle and function code to Contentful:
+```bash
+yarn upload
+```
+For CI usage, set `CONTENTFUL_ORG_ID`, `CONTENTFUL_APP_DEF_ID`, and `CONTENTFUL_ACCESS_TOKEN`, then run `yarn upload-ci` or `yarn upsert-actions-ci` to register/update the App Actions programmatically.
+
+## Usage inside Contentful
+1. Install the app into a space/environment via the Contentful web app.
+2. Open any `siteGameV2` entry. In the actions menu you’ll see:
+   - **Hide SiteGame On Live** (`hideOnLive`): calls `enableLiveHiddenActionHandler` to set `liveHidden` to `true`.
+   - **Show SiteGame On Live** (`showOnLive`): calls `disableLiveHiddenActionHandler` to set `liveHidden` to `false`.
+3. Each action expects an `entryIds` payload; when invoked from entry actions Contentful passes the current entry ID automatically.
+
+## Testing
+Run unit tests (Vitest + React Testing Library):
+```bash
+yarn test
 ```
 
-## Available Scripts
+## Contributing
+1. Fork or clone the repository.
+2. Create a feature branch and implement your changes.
+3. Run `yarn test` and `yarn build` to ensure quality.
+4. Open a pull request describing the change and any Contentful configuration updates (new actions, permissions, etc.).
 
-In the project directory, you can run:
-
-#### `npm start`
-
-Creates or updates your app definition in Contentful, and runs the app in development mode.
-Open your app to view it in the browser.
-
-The page will reload if you make edits.
-You will also see any lint errors in the console.
-
-#### `npm run build`
-
-Builds the app for production to the `build` folder.
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.
-Your app is ready to be deployed!
-
-#### `npm run upload`
-
-Uploads the build folder to contentful and creates a bundle that is automatically activated.
-The command guides you through the deployment process and asks for all required arguments.
-Read [here](https://www.contentful.com/developers/docs/extensibility/app-framework/create-contentful-app/#deploy-with-contentful) for more information about the deployment process.
-
-#### `npm run upload-ci`
-
-Similar to `npm run upload` it will upload your app to contentful and activate it. The only difference is  
-that with this command all required arguments are read from the environment variables, for example when you add
-the upload command to your CI pipeline.
-
-For this command to work, the following environment variables must be set:
-
-- `CONTENTFUL_ORG_ID` - The ID of your organization
-- `CONTENTFUL_APP_DEF_ID` - The ID of the app to which to add the bundle
-- `CONTENTFUL_ACCESS_TOKEN` - A personal [access token](https://www.contentful.com/developers/docs/references/content-management-api/#/reference/personal-access-tokens)
-
-## Libraries to use
-
-To make your app look and feel like Contentful use the following libraries:
-
-- [Forma 36](https://f36.contentful.com/) – Contentful's design system
-- [Contentful Field Editors](https://www.contentful.com/developers/docs/extensibility/field-editors/) – Contentful's field editor React components
-
-## Using the `contentful-management` SDK
-
-In the default create contentful app output, a contentful management client is
-passed into each location. This can be used to interact with Contentful's
-management API. For example
-
-```js
-// Use the client
-cma.locale.getMany({}).then((locales) => console.log(locales));
-```
-
-Visit the [`contentful-management` documentation](https://www.contentful.com/developers/docs/extensibility/app-framework/sdk/#using-the-contentful-management-library)
-to find out more.
-
-## Learn More
-
-[Read more](https://www.contentful.com/developers/docs/extensibility/app-framework/create-contentful-app/) and check out the video on how to use the CLI.
+## Additional resources
+- [Contentful App Framework docs](https://www.contentful.com/developers/docs/extensibility/app-framework/)
+- [Working with App Action functions](https://www.contentful.com/developers/docs/extensibility/app-framework/working-with-functions/)
+- [Forma 36 design system](https://f36.contentful.com/)
