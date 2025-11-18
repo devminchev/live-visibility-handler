@@ -1,0 +1,46 @@
+{
+  "functions": [
+    {
+      "id": "enableLiveHiddenActionHandler",
+      "name": "Enable Live Hidden Status App Action Call Function",
+      "description": "Function handler to hide entry on Production environments by setting liveHidden field value to true.",
+      "path": "functions/enableLiveHiddenActionHandler.js",
+      "entryFile": "functions/enableLiveHiddenActionHandler.ts",
+      "allowNetworks": [
+        "api.contentful.com"
+      ],
+      "accepts": [
+        "appaction.call"
+      ]
+    },
+    {
+      "id": "disableLiveHiddenActionHandler",
+      "name": "Disable Live Hidden Status App Action Call Function",
+      "description": "Function handler to show entry on Production environments by setting liveHidden field value to false.",
+      "path": "functions/disableLiveHiddenActionHandler.js",
+      "entryFile": "functions/disableLiveHiddenActionHandler.ts",
+      "allowNetworks": [
+        "api.contentful.com"
+      ],
+      "accepts": [
+        "appaction.call"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "hideOnLive",
+      "name": "Hide SiteGame On Live",
+      "type": "function-invocation",
+      "functionId": "enableLiveHiddenActionHandler",
+      "category": "Entries.v1.0"
+    },
+    {
+      "id": "showOnLive",
+      "name": "Show SiteGame On Live",
+      "type": "function-invocation",
+      "functionId": "disableLiveHiddenActionHandler",
+      "category": "Entries.v1.0"
+    }
+  ]
+}
